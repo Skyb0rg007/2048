@@ -1,18 +1,15 @@
 /* Comp11
  * Homework 7
  * Skye Soss
+ *
+ * NOTE TO GRADER:
+ * I liked to think of the grid as an (x,y) system, so that is why
+ * the slide and combine functions take arguments as x, y, even though
+ * the grid is accessed as grid[y][x].
  */
 
 #ifndef __GRID_CPP__
 #define __GRID_CPP__
-
-//For debugging:
-#define NLOG_GRID
-#ifndef NLOG_GRID
-#define LOG(x) do { clog << "* Log: " x << endl; } while (0)
-#else
-#define LOG(x) (void) 0
-#endif
 
 #include "grid.h"   //Grid prototypes              -- Defined grid class
 #include <string>   //string                       -- string modification
@@ -22,130 +19,130 @@
 #include <utility>  //pair, make_pair()            -- storing coordinates
 #include <vector>   //vector, .push_back()         -- storing coordinates
 #include <sstream>  //stringstream, .str()         -- converting int to string
-#include <termios.h>//termios, tcgetattr(), tcsetattr(), .c_lflag()
-#include <unistd.h> //STDIN_FILENO                 -- for buffer settings
 #include <cmath>    //log2()                       -- for color setting
 
 using namespace std;
 
-//static prototypes
+//exported prototypes
 extern string int_to_string (int);
+
+//internal prototypes
 static string format        (int);
 static string get_color_for (int);
 
+//internal constants
 static const int    BUFFER_SIZE_X    = 2;    //Spaces between tiles
 static const int    BUFFER_SIZE_Y    = 2;    //Newlines between lines of tiles
-static const int    BOX_LENGTH       = 5;    //width of each tile (height is always 1)
-static const string COLOR_CODES[14] = {"41;1", "42;1", "43;1", "44;1", "45;1",
-                                      "46;1", "47;1", "47;1;30", "47;1;31",
-                                      "47;1;32", "47;1;33", "47;1;34",
-                                      "47;1;35", "47;1;36"};
+static const int    BOX_LENGTH       = 5;    //width of each tile
+static const string COLOR_CODES[14]  =       //the ANSI codes for colors
+{"41;1",    "42;1",    "43;1",    "44;1",    "45;1",    "46;1",    "47;1",
+ "47;1;30", "47;1;31", "47;1;32", "47;1;33", "47;1;34", "47;1;35", "47;1;36"};
+//The 40's control background colors, 30s control text colors
 
-
-Grid::Grid()
+Grid::Grid()    //Constructor, the grid is initially a NULL pointer
 {
   score = 0;
   grid  = NULL;
-  LOG("Grid created!");
 }
 
-Grid::~Grid()
+Grid::~Grid()   //Destructor, calls delete_grid() to deallocate the grid
 {
   delete_grid();
-  LOG("Grid destroyed!");
 }
 
-void Grid::create_grid(int size)
+void Grid::create_grid(int size)  //Allocates and initializes grid
 {
   grid_size = size;
-  grid = new int*[grid_size];            //Allocate grid to hold 'size' pointers
+  grid = new int*[grid_size];            //Allocate grid to hold <size> pointers
   for (int i = 0; i < grid_size; i++)    //Set each pointer to point to
-    grid[i] = new int[grid_size];          //an 'n' size array of ints
+    grid[i] = new int[grid_size];        //a <size> array of ints
+
+  for (int i = 0; i < grid_size; i++)
+    for (int j = 0; j < grid_size; j++)
+      grid[j][i] = 0;                     //initialize each tile to 0
 }
 
-void Grid::delete_grid()
+void Grid::delete_grid()    //Deallocates grid
 {
   for (int i = 0; i < grid_size; i++)
-    delete [] grid[i];
-  delete [] grid;
+    delete [] grid[i];      //Dereference each row
+
+  delete [] grid;           //Dereference each collumn
   grid = NULL;
-  LOG("2D array dereferenced");
 }
 
-int Grid::get_score()
+int Grid::get_score()     //Getter for the score of the round
 {
   return score;
 }
 
-bool Grid::check_loss()
+bool Grid::check_loss()   //Needed to end the game loop if you lose
 {
   for (int i = 0; i < grid_size; i++) {
     for (int j = 0; j < grid_size; j++) {
-      if (grid[i][j] == 0)
+      if (grid[j][i] == 0)    //If a tile is zero, you didn't lose
         return true;
-      if (j+1 != grid_size && grid[i][j] == grid[i][j+1])
+      if (i+1 != grid_size && grid[j][i] == grid[j][i+1])
         return true;
-      if (i+1 != grid_size && grid[i][j] == grid[i+1][j])
+      if (j+1 != grid_size && grid[j][i] == grid[j+1][i])
         return true;
+      //If a tile below or to the right is the same value, you didn't lose
     }
   }
-  return false;
+  return false;   //You only lost if none of these applied
 }
 
-void Grid::spawn(int tile_val = -1)
+void Grid::spawn(int tile_val = -1)   //Creates a tile at a random open spot
 {
   static bool seeded = false; //Make sure that the rand function is seeded
   if (!seeded) {
     srand(time(NULL));
     seeded = true;
-    // LOG("Srand seeded!");
   }
   vector<pair <int, int> > open_indicies; //Make a vector of indexes
   int num_open = 0, num_to_spawn;
   if (tile_val == -1)
     num_to_spawn = (rand() % 10 == 0) ? 4 : 2; //10% = 4, 90% = 2
   else
-    num_to_spawn = tile_val;
-  LOG("Spawned a " << num_to_spawn);
+    num_to_spawn = tile_val;    //Only make the value random if it isn't given
   for (int i = 0; i < grid_size; i++) {
     for (int j = 0; j < grid_size; j++) {
-      if (grid[i][j] == 0) {
-        open_indicies.push_back(make_pair(i, j)); //Add free indicies to vector
+      if (grid[j][i] == 0) {
+        open_indicies.push_back(make_pair(j, i)); //Add free indicies to vector
         num_open++;
       }
     }
   }
-  // LOG("There are " << num_open << " open squares");
   if (num_open == 0)
     return;
-      //Function returns if you cannot spawn another tile (you lose)
+      //Function just returns if you cannot spawn another tile
   int coord = rand() % num_open;
   grid
-    [open_indicies[coord].first] //x coord
-    [open_indicies[coord].second] = num_to_spawn; //y coord
+    [open_indicies[coord].first]                  //y coord
+    [open_indicies[coord].second] = num_to_spawn; //x coord
 }
 
-extern string int_to_string(int i)
+extern string int_to_string(int i) //Gives functionality of the C++11 function
 {
-  stringstream s;
-  s << i;
-  return s.str();
+  stringstream s;     //Creates a stream...
+  s << i;             //...pushes the integer into it...
+  return s.str();     //...and then takes the integer back out as a string.
 }
 
 static string get_color_for(int val)
 {
   int color_num;
   if (val < 0)
-    color_num = 0;
+    color_num = 0;            //turns the 0 into a 0
   else
-    color_num = log2(val);
+    color_num = log2(val);    //Turns the 2-4-8 into 1-2-3, easier to index
   if (color_num > 13)
-    color_num = 13;
+    color_num = 13;           //the table maxes out at 2^13, so don't segfault
 
   return COLOR_CODES[color_num];
 }
 
-static string format(int num = -1) //static -> only used by show method
+static string format(int num = -1) //formats the value so it can be printed
 {
   string color_code = get_color_for(num);
   if (num == -1) {
@@ -164,9 +161,12 @@ static string format(int num = -1) //static -> only used by show method
 void Grid::show()
 {
   cout << "\033[2J" << endl;            //the "clear screen" escape code
-  for (int j = grid_size - 1; j >= 0; j--) {   // y coord (counts down)
-    for (int i = 0; i < grid_size; i++) {      // x coord (counts up)
-      string val = (grid[i][j] == 0) ? format() : format(grid[i][j]);
+
+  cout << "Current score: " << score << "\n\n" << endl; // your score
+
+  for (int j = 0; j < grid_size; j++) {       // y coord
+    for (int i = 0; i < grid_size; i++) {     // x coord
+      string val = (grid[j][i] == 0) ? format() : format(grid[j][i]);
         //Convert zeros into "x"s, but keep the other values the same
       cout << val << string (BUFFER_SIZE_X, ' ');
     }
@@ -176,11 +176,10 @@ void Grid::show()
 
 bool Grid::combine(int x1, int y1, int x2, int y2) //(x1, y1) -> (x2, y2)
 {
-  int * tile1 = &grid[x1][y1];
-  int * tile2 = &grid[x2][y2];
+  int * tile1 = &grid[y1][x1];    //need to use pointer so
+  int * tile2 = &grid[y2][x2];    //we can change the real value
   bool combined = false;
-  // LOG("Combine1: (" << x1 << "," << y1 << ") = " << *tile1);
-  // LOG("Combine2: (" << x2 << "," << y2 << ") = " << *tile2);
+
   if (*tile1 == *tile2 && *tile1 != 0) {  //Combines the tiles, score increase
     *tile2 *= 2;
     *tile1 = 0;
@@ -192,11 +191,10 @@ bool Grid::combine(int x1, int y1, int x2, int y2) //(x1, y1) -> (x2, y2)
 
 bool Grid::slide(int x1, int y1, int x2, int y2)
 {
-  int * tile1 = &grid[x1][y1];
-  int * tile2 = &grid[x2][y2];
+  int * tile1 = &grid[y1][x1];
+  int * tile2 = &grid[y2][x2];
   bool moved = false;
-  // LOG("Slide1: (" << x1 << "," << y1 << ") = " << *tile1);
-  // LOG("Slide2: (" << x2 << "," << y2 << ") = " << *tile2);
+
   if (*tile2 == 0 && *tile1 != 0) {    //Just moves the tile, no score increase
     *tile2 = *tile1;
     *tile1 = 0;
@@ -226,9 +224,38 @@ bool Grid::move(char movement)
   }
 }
 
-#define uploop(expression) \
+//Because of the many loops in my movement functions,
+//I created a macro for each one which uses the i variable
+//for x values and j variable for y values. Hope it is more
+//readable this way.
+#define downloop(expression) \
 for (int i = 0; i < grid_size; i++) { \
   for (int j = grid_size - 1; j > 0; j--) { \
+    expression \
+  } \
+}
+
+void Grid::down()
+{
+  bool moved = false;   //You don't spawn any new tiles if nothing was moved
+  for (int k = 0; k < grid_size; k++)
+    downloop(if (slide(i, j-1, i, j)) moved = true;)
+    //Ensures that the tiles are pushed to the right as far as they can
+
+  downloop(if (combine(i, j-1, i, j)) moved = true;)
+  //Actually combines them
+
+  for (int k = 0; k < grid_size; k++)
+    downloop(if (slide(i, j-1, i, j)) moved = true;)
+    //Ensures that the tiles are again pushed right as much as possible
+  if (moved)
+    spawn();
+}
+
+//The same comment from the downloop works for the following functions too
+#define uploop(expression) \
+for (int i = 0; i < grid_size; i++) { \
+  for (int j = 0; j < grid_size - 1; j++) { \
     expression \
   } \
 }
@@ -237,38 +264,14 @@ void Grid::up()
 {
   bool moved = false;
   for (int k = 0; k < grid_size; k++)
-    uploop(if (slide(i, j-1, i, j)) moved = true;)
+    uploop(if (slide(i, j+1, i, j)) moved = true;)
     //Ensures that the tiles are pushed to the right as far as they can
 
-  uploop(if (combine(i, j-1, i, j)) moved = true;)
+  uploop(if (combine(i, j+1, i, j)) moved = true;)
   //Actually combines them
 
   for (int k = 0; k < grid_size; k++)
-    uploop(if (slide(i, j-1, i, j)) moved = true;)
-    //Ensures that the tiles are again pushed right as much as possible
-  if (moved)
-    spawn();
-}
-
-#define downloop(expression) \
-for (int i = 0; i < grid_size; i++) { \
-  for (int j = 0; j < grid_size - 1; j++) { \
-    expression \
-  } \
-}
-
-void Grid::down()
-{
-  bool moved = false;
-  for (int k = 0; k < grid_size; k++)
-    downloop(if (slide(i, j+1, i, j)) moved = true;)
-    //Ensures that the tiles are pushed to the right as far as they can
-
-  downloop(if (combine(i, j+1, i, j)) moved = true;)
-  //Actually combines them
-
-  for (int k = 0; k < grid_size; k++)
-    downloop(if (slide(i, j+1, i, j)) moved = true;)
+    uploop(if (slide(i, j+1, i, j)) moved = true;)
     //Ensures that the tiles are again pushed right as much as possible
   if (moved)
     spawn();

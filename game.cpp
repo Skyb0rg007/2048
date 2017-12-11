@@ -6,62 +6,51 @@
 #ifndef __GAME_CPP__
 #define __GAME_CPP__
 
-//For debugging:
-#define NLOG_GAME
-#ifndef NLOG_GAME
-#define L(x) do { clog << "* Log: " x << endl; } while (0)
-#else
-#define L(x) (void) 0
-#endif
-
-#include "grid.cpp" //Grid methods
-#include "game.h"   //Game prototypes
-#include <iostream> //cout, cin, <<, >>
-#include <utility>  //pair, make_pair()
-#include <fstream>  //ifstream, ofstream
-#include <limits>   //max()
-#include <vector>   //vector
-#include <algorithm>//sort
+#include "grid.cpp" //Grid methods          -- To implement game methods
+#include "game.h"   //Game prototypes       -- The prototypes we implement
+#include "io.cpp"   //modify_buffer()       -- Changing the buffer settings
+#include <iostream> //cout, cin, <<, >>     -- Basic I/O
+#include <utility>  //pair, make_pair()     -- Keeps name and score together
+#include <fstream>  //ifstream, ofstream    -- File I/O
+#include <limits>   //max()                 -- See Grid::exit_game()
+#include <vector>   //vector                -- See insert_to_file()
+#include <algorithm>//sort                  -- See insert_to_file()
 
 using namespace std;
 
+//internal containers
 typedef pair<string, int> player_id; //Combination of name and score
 
-//static prototypes
+//exported prototypes
 static void insert_to_file(player_id, string);
 static bool player_comparison(player_id, player_id);
 static string format(string s);
 static string reformat(string s);
 
+//internal constants
 static const int STARTING_CT  = 2;
 static const int STARTING_VAL = 2;
-const bool GAME_MODE = true;
-const bool TERMINAL_MODE = false;
 
-Game::Game(string file)
+Game::Game(string file)   //Contructs the game, with the save-file specified
 {
   filename = file;
-  game_over = false;
+  game_over = false;      //game isn't over yet!
   for (int i = 0; i < 5; i++)
-    high_scores[i] = make_pair("No_one", 0);
-  L("Game constructed!");
+    high_scores[i] = make_pair("No_one", 0); //high_scores starts with No_One's
 }
 
-Game::~Game()
-{
-  L("Game deconstructed!");
-}
+Game::~Game() {}  //No need to decontruct anything--no dynamic allocation
 
-void Game::setup_grid(int size)
+void Game::setup_grid(int size) //initializes grid and spawns 2 2's
 {
   my_grid.create_grid(size);
-  for (int i = 0; i < STARTING_CT; i++)
+  for (int i = 0; i < STARTING_CT; i++) {
     my_grid.spawn(STARTING_VAL);
-  L("Grid of size "<<size<<" was setup and "<<STARTING_CT<<" tiles were spawned");
+  }
   my_grid.show();
 }
 
-void Game::turn(char move)
+void Game::turn(char move) //The entire game, each possible move is represented
 {
   switch (move) {
     case 'w':
@@ -85,24 +74,12 @@ void Game::turn(char move)
   }
 }
 
-bool Game::is_over()
+bool Game::is_over()    //getter for the game_over variable
 {
   return game_over;
 }
 
-extern void modify_buffer(bool mode)
-{
-  struct termios t;
-  tcgetattr(STDIN_FILENO, &t);//Get the current terminal I/O structure
-  if (mode == GAME_MODE)
-    t.c_lflag &= ~(ICANON | ECHO);       //Disable buffering and echo
-  else
-    t.c_lflag |= (ICANON | ECHO);        //Enable buffering and echo
-
-  tcsetattr(STDIN_FILENO, TCSANOW, &t); //Apply the new settings now
-}
-
-void Game::exit_game()
+void Game::exit_game()    //What happens when you lose/quit
 {
   modify_buffer(TERMINAL_MODE);
   cout << "YOU LOST!!\n\n\n"
@@ -121,6 +98,7 @@ void Game::exit_game()
   cout << "Enter your name: ";
   cin.ignore(numeric_limits<streamsize>::max(), '\n');
     //flush the newlines in stdin from cin calls
+    //the first argument is the largest size cin can be
   getline(cin, name);
   player_id player_pair = make_pair(format(name), my_grid.get_score());
   insert_to_file(player_pair, filename);
@@ -138,10 +116,9 @@ static void insert_to_file(player_id player, string filename)
   vector<player_id> players;    //Creating the container to hold
   ifstream f_read;              //  players from the file
   f_read.open(filename.c_str());
-  if (!f_read.is_open()) {
-    L("" << filename << " does not exist, creating...");
+  if (!f_read.is_open())
     goto enter_scores;           //Skip the loading of previous players
-  }                              //if the file doesn't exist
+                                 //if the file doesn't exist
   while (!f_read.eof())
   {
     string name;
@@ -164,12 +141,11 @@ static void insert_to_file(player_id player, string filename)
   f_write.close();  //Add back the players, and close the write file
 }
 
-void Game::show_scores()
+void Game::show_scores()  //Displays the scores on the screen
 {
-  static bool scores_loaded = false;
+  static bool scores_loaded = false;  //Only needs to load once
   if (!scores_loaded) {
     get_scores();
-    L("Grabbed scores from "<<filename<<"!");
     scores_loaded = true;
   }
   my_grid.show();
@@ -177,60 +153,40 @@ void Game::show_scores()
     cout << i+1 << ") " << reformat(high_scores[i].first)
          << "   \t" << high_scores[i].second << endl;
   }
-  L("Showing scores!");
 }
 
 static string format(string s)
-{
+{ //To make sure that we can save names with spaces, we replace them with
+  //underscores in the file, and change back to spaces when displayed
   replace( s.begin(), s.end(), ' ', '_');
   return s;
 }
 
 static string reformat(string s)
-{
+{ //See comments for format()
   replace( s.begin(), s.end(), '_', ' ');
   return s;
 }
 
 void Game::get_scores()
-{
+{ //Loads the scores from the file
   ifstream file;
   file.open(filename.c_str());
-  if (!file.good()) {
+  if (!file.good()) { //Keep the No_one's if can't load file
     for (int i = 0; i < 5; i++)
       high_scores[i] = make_pair("No_one", 0);
     return;
   }
-  if (!file.is_open())
-    cout << "Cannot open the file!!" << endl;
   string name;
   int score;
   for (int i = 0; i < 5; i++) {
-    file >> name;
-    if (file.eof())
+    file >> name;     //reads from the file, getting name and score
+    if (file.eof())   //needs to read the eof before we can see it
+                      //so this needs to be after the 'file>>name' line
       break;
     file >> score;
     high_scores[i] = make_pair(name, score);
   }
 }
-
-#ifndef __2048_CPP__
-int main()
-{
-
-  Game my_game("scores.txt");
-  int size;
-  cout << "Enter size" << endl;
-  cin >> size;
-  my_game.setup_grid(size);
-  modify_buffer(GAME_MODE);
-  char move;
-  while (!my_game.is_over()) {
-    cin >> move;
-    my_game.turn(move);
-  }
-  return 0;
-}
-#endif
 
 #endif
