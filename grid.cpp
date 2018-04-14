@@ -8,8 +8,6 @@
  * the grid is accessed as grid[y][x].
  */
 
-#ifndef __GRID_CPP__
-#define __GRID_CPP__
 
 #include "grid.h"   //Grid prototypes              -- Defined grid class
 #include <string>   //string                       -- string modification
@@ -23,8 +21,6 @@
 
 using namespace std;
 
-//exported prototypes
-extern string int_to_string (int);
 
 //internal prototypes
 static string format        (int);
@@ -325,4 +321,3 @@ void Grid::right()
     spawn();
 }
 
-#endif

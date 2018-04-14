@@ -7,6 +7,8 @@
 #ifndef __GRID_H__
 #define __GRID_H__
 
+#include <string>
+
 class Grid
 {
 public:
@@ -36,5 +38,8 @@ private:
   int   grid_size;   //the x and y dimensions of the grid                   [x]
   int   score;       //pretty obvious what this holds                       [x]
 };
+
+//exported prototypes
+std::string int_to_string (int);
 
 #endif

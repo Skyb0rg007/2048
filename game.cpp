@@ -3,18 +3,17 @@
  * Skye Soss
  */
 
-#ifndef __GAME_CPP__
-#define __GAME_CPP__
 
-#include "grid.cpp" //Grid methods          -- To implement game methods
+#include "grid.h" //Grid methods          -- To implement game methods
 #include "game.h"   //Game prototypes       -- The prototypes we implement
-#include "io.cpp"   //modify_buffer()       -- Changing the buffer settings
+#include "io.h"   //modify_buffer()       -- Changing the buffer settings
 #include <iostream> //cout, cin, <<, >>     -- Basic I/O
 #include <utility>  //pair, make_pair()     -- Keeps name and score together
 #include <fstream>  //ifstream, ofstream    -- File I/O
 #include <limits>   //max()                 -- See Grid::exit_game()
 #include <vector>   //vector                -- See insert_to_file()
 #include <algorithm>//sort                  -- See insert_to_file()
+#include <unistd.h>
 
 using namespace std;
 
@@ -189,4 +188,3 @@ void Game::get_scores()
   }
 }
 
-#endif

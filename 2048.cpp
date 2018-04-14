@@ -3,11 +3,10 @@
  * Skye Soss
  */
 
-#ifndef __2048_CPP__
-#define __2048_CPP__
  
-#include "game.cpp" //Game methods
-#include "io.cpp"   //IO functions
+#include "game.h" //Game methods
+#include "io.h"   //IO functions
+#include <unistd.h>
 
 int main()
 {
@@ -27,4 +26,3 @@ int main()
   return 0;
 }
 
-#endif

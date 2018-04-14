@@ -3,25 +3,19 @@
  * Skye Soss
  */
 
-#ifndef __IO_CPP__
-#define __IO_CPP__
 
+#include "io.h"
 #include <termios.h>//termios, tcgetattr(), tcsetattr(), .c_lflag()
 #include <unistd.h> //STDIN_FILENO                 -- for buffer settings
+#include <string>
+#include <iostream>
 
-//exported prototypes
-extern int  get_difficulty(void);
-extern char get_input     (string);
-extern void modify_buffer (int);
+using namespace std;
 
 //internal prototypes
 static char arrow_to_char (char, char, char);
 static void shift_down    (char arr[5]);
 static void shift_up      (char arr[5]);
-
-//constants used in other files as well
-extern const int GAME_MODE     = 0;
-extern const int TERMINAL_MODE = 1;
 
 static char arrow_to_char(char a, char b, char c)
 {
@@ -42,7 +36,7 @@ static char arrow_to_char(char a, char b, char c)
   }                         //(Will recycle in get_input() func)
 }
 
-extern void modify_buffer(int mode)
+void modify_buffer(int mode)
 {
   struct termios t;
   tcgetattr(STDIN_FILENO, &t);//Get the current terminal I/O structure
@@ -54,7 +48,7 @@ extern void modify_buffer(int mode)
   tcsetattr(STDIN_FILENO, TCSANOW, &t); //Apply the new settings now
 }
 
-extern char get_input(string valid_keys = "wasdqh")   //Validates input
+char get_input(string valid_keys)   //Validates input
 {
   modify_buffer(GAME_MODE);  //Arrow key input only works without buffering
   char a, b, c, return_val = 'x';
@@ -72,7 +66,7 @@ extern char get_input(string valid_keys = "wasdqh")   //Validates input
   return return_val;
 }
 
-extern int get_difficulty()
+int get_difficulty()
 {
   char select[5] = {' ', ' ', '>', ' ', ' '}; //Default position: 2
   char inp;
@@ -131,4 +125,3 @@ static void shift_down(char arr[5])
     }
 }
 
- #endif

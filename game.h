@@ -29,7 +29,7 @@ public:
 
 private:
   std::string filename;   //filename for the high scores                    [x]
-  pair<std::string, int> high_scores[5];
+  std::pair<std::string, int> high_scores[5];
                           //array of name-scores pairs                      [x]
   Grid my_grid;           //the board itself                                [x]
   bool game_over;         //whether the game is over                        [x]
